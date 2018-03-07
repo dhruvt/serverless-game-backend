@@ -1,0 +1,495 @@
+swagger: "2.0"
+info:
+  title: AWS Serverless Core Game Backend API
+  description: This Serverless API powers a fictional online game and is used to demonstrate how you can create digital services for your game using AWS Serverless Products
+  version: "1.0.0"
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+# the domain of the service
+host: api.aws-serverless-game.org
+# array of all schemes that your API supports
+schemes:
+  - https
+  - http
+# will be prefixed to all paths
+basePath: /api/v1
+produces:
+  - application/json
+paths:
+  /user/register:
+    post:
+      tags:
+        - user
+      summary: Adds a new user when they register for the game
+      description: "This API adds a new user to the serverless game. A valid user is requried to access all operations within the game. This game does not support guest users at this point"
+      operationId: addUser
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: user
+          description: The user to create.
+          required: true
+          schema:
+            type: object
+            required:
+              - userName
+              - passwordHash
+            properties:
+              userName:
+                type: string
+              passwordHash:
+                type: string
+              country:
+                type: string
+              language:
+                type: string
+            example:
+              userName: L33tGamer
+              passwordHash: 9e107d9d372bb6826bd81d3542a419d6
+              country: FRA
+              language: fra
+      responses:
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/Error'
+        200:
+          description: A User Object
+          schema:
+            $ref: '#/definitions/User'
+  /user/authenticate:
+    post:
+      tags:
+        - user
+      summary: Authenticates a user 
+      description: "This API authenticates an existing user from the provided username and password. It is the responsibility of the client to hash the password and send it in the body of the request. A successful operation will return a Cognito OpenID token that will allow the user to access other APIs in the platform."
+      operationId: authenticateUser
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: user
+          description: The user to authenticate.
+          required: true
+          schema:
+            type: object
+            required:
+              - userName
+              - passwordHash
+            properties:
+              userName:
+                type: string
+              passwordHash:
+                type: string
+            example:
+              userName: L33tGamer
+              passwordHash: 9e107d9d372bb6826bd81d3542a419d6
+      responses:
+        500:
+          description: Invalid input
+          schema:
+            $ref: '#/definitions/Error'
+        200:
+          description: A User Object
+          schema:
+            $ref: '#/definitions/User'     
+  /user/{userid}:
+    get:
+      tags:
+        - user
+      operationId: getUser
+      parameters:
+        - name: userid
+          in: path
+          type: integer
+          description: ID of the user
+          required: true
+      responses:
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/Error'
+        200:
+          description: A User Object
+          schema:
+            $ref: '#/definitions/User'
+        401:
+          $ref: "#/responses/UnauthorizedError"
+      security:
+        - CognitoTokenHeader: []
+  /leaderboard:
+    post:
+      tags:
+        - leaderboard
+      summary: Adds a new score to the leaderboard for a particular game
+      description: "This API adds a new score value to the leaderboard for a serverless game. A valid Cognito Token is requried to access all leaderboard operations within the game."
+      operationId: addScore
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: leaderboard
+          description: The leaderboard for this operation.
+          required: true
+          schema:
+            type: object
+            required:
+              - userid
+              - gameid
+              - score
+            properties:
+              userid:
+                type: integer
+              gameid:
+                type: integer
+              score:
+                type: integer
+            example:
+              userid: 17564
+              gameid: 12
+              score: 15000
+      responses:
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/Error'
+        200:
+          description: A Leaderboard Object
+          schema:
+            $ref: '#/definitions/Leaderboard'
+        401:
+          $ref: "#/responses/UnauthorizedError"
+      security:
+        - CognitoTokenHeader: []
+  /leaderboard/{userid}/{gameid}:
+    get:
+      tags:
+        - leaderboard
+      operationId: getScore
+      parameters:
+        - name: userid
+          in: path
+          type: integer
+          description: ID of the user
+          required: true
+        - name: gameid
+          in: path
+          type: integer
+          description: ID of the game
+          required: true 
+      responses:
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/Error'
+        200:
+          description: A Leaderboard Object
+          schema:
+            $ref: '#/definitions/Leaderboard'
+        401:
+          $ref: "#/responses/UnauthorizedError"
+      security:
+        - CognitoTokenHeader: []
+  /store/{gameid}:
+    get:
+      tags:
+        - store
+      operationId: getStore
+      parameters:
+        - name: gameid
+          in: path
+          type: integer
+          description: ID of the game for which the store needs to be loaded
+          required: true 
+      responses:
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/Error'
+        200:
+          description: An array of Store Items available for the game
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/StoreItem'
+        401:
+          $ref: "#/responses/UnauthorizedError"
+      security:
+        - CognitoTokenHeader: []
+  /store/{gameid}/{itemid}:
+    get:
+      tags:
+        - store
+      operationId: getStoreItem
+      parameters:
+        - name: gameid
+          in: path
+          type: integer
+          description: ID of the game for which the store needs to be loaded
+          required: true
+        - name: itemid
+          in: path
+          type: integer
+          description: ID of the item for which you need to retrieve details
+          required: true
+      responses:
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/Error'
+        200:
+          description: Details of the store item 
+          schema:
+            $ref: '#/definitions/StoreItem'
+        401:
+          $ref: "#/responses/UnauthorizedError"
+      security:
+        - CognitoTokenHeader: []
+  /achievement:
+    post:
+      tags:
+        - achievement
+      summary: Submits a new achievement for the user for a game 
+      description: "This API adds a new achievement in the system when a player unlocks certain conditions within the game for that achievement."
+      operationId: addAchievement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: achievement
+          description: The achievement to post.
+          required: true
+          schema:
+            type: object
+            required:
+              - userid
+              - achievementid
+              - gameid
+            properties:
+              userid:
+                type: integer
+              achievementid:
+                type: integer
+              gameid: 
+                type: integer
+            example:
+              userid: 17564
+              gameid: 12
+              achievementid: 102
+      responses:
+        500:
+          description: Invalid input
+          schema:
+            $ref: '#/definitions/Error'
+        200:
+          description: An Achievement Object
+          schema:
+            $ref: '#/definitions/Achievement'
+        401:
+          $ref: "#/responses/UnauthorizedError"
+      security:
+        - CognitoTokenHeader: []
+  /achievement/{gameid}:
+    get:
+      tags:
+        - achievement
+      operationId: getGameAchievements
+      parameters:
+        - name: gameid
+          in: path
+          type: integer
+          description: ID of the game for which the list of achievements need to be displayed
+          required: true
+      responses:
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/Error'
+        200:
+          description: An array of Achievements available for the game
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Achievement'
+        401:
+          $ref: "#/responses/UnauthorizedError"
+      security:
+        - CognitoTokenHeader: []
+  /achievement/{gameid}/{userid}:
+    get:
+      tags:
+        - achievement
+      operationId: getUserAchievements
+      parameters:
+        - name: gameid
+          in: path
+          type: integer
+          description: ID of the game for which the user achievements need to be displayed
+          required: true
+        - name: userid
+          in: path
+          type: integer
+          description: ID of the user for which to display all the achievements
+          required: true
+      responses:
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/Error'
+        200:
+          description: An array of Achievements achieved by the user for the game
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Achievement'
+        401:
+          $ref: "#/responses/UnauthorizedError"
+      security:
+        - CognitoTokenHeader: []
+definitions:
+  User:
+    type: object
+    required:
+      - userid
+      - userName
+      - passwordHash
+      - openIdToken
+    properties:
+      userid:
+        type: integer
+        description: The system generated userId of the user
+        format: int64
+      userName:
+        type: string
+        description: The username provided by the user, can only contain characters and numbers
+      passwordHash:
+        type: string
+        description: The hashed password of the user
+      openIdToken:
+        type: string
+        description: The openId token associated with the user after they authenticate successfully
+      country:
+        type: string
+        description: The country where the user resides in ISO 3166-1 alpha-3 format
+      language:
+        type: string
+        description: The language preference for the given user in ISO 639-2 alpha-3 format
+  Leaderboard:
+    type: object
+    required:
+      - userid
+      - gameid
+      - score
+      - rank
+    properties:
+      userid:
+        type: integer
+        description: The system generated userId of the user
+        format: int64
+      gameid:
+        type: integer
+        description: The id of the game for which the score is being stored
+        format: int64
+      score:
+        type: integer
+        description: The score value achieved by the player for the game
+        format: int64
+      rank:
+        type: integer
+        description: The rank of the player in the overall game based on score
+        format: int64
+  StoreItem:
+    type: object
+    required:
+      - itemid
+      - gameid
+      - name
+      - itemdescription
+      - assetUrl
+      - price
+      - quantity
+    properties:
+      itemid:
+        type: integer
+        description: The id of the store item
+        format: int64
+      gameid:
+        type: integer
+        description: The id of the game for which the store item belongs to
+        format: int64
+      price:
+        type: integer
+        description: The price of the item
+        format: int64
+      quantity:
+        type: integer
+        description: The quantity of the item available
+        format: int64
+      name:
+        type: string
+        description: The name of the item
+      itemdescription:
+        type: string
+        description: The description of the item
+      assetImageUrl:
+        type: string
+        description: The url where the asset images are stored
+      assetUrl:
+        type: string
+        description: The url where the actual asset files are stored
+  Achievement:
+    type: object
+    required:
+      - achievementid
+      - gameid
+      - name
+      - value
+      - badgeUrl
+    properties:
+      achievementid:
+        type: integer
+        description: The system generated id of the achievement
+        format: int64
+      gameid:
+        type: integer
+        description: The id of the game for which the achievement belongs to
+        format: int64
+      value:
+        type: string
+        description: The score value for the achievement
+        format: int64
+      name:
+        type: string
+        description: The rank of the player in the overall game based on score
+      badgeUrl:
+        type: string
+        description: The url where the badge icon file is stored
+  Error:
+    type: object
+    required:
+      - code
+      - message
+    properties:
+      code:
+        type: integer
+        format: int32
+      message:
+        type: string
+securityDefinitions:
+   CognitoTokenHeader:
+     type: apiKey
+     in: header
+     name: X-COGNITO-TOKEN
+responses:
+  UnauthorizedError:
+    description: Invalid CognitoID Token
